@@ -16,12 +16,12 @@ library(plotly)
 # Data setup
 #download_observations()
 portal_data <- load_data()
-abundances <- abundance(shape = "long", clean = FALSE) %>% 
+abundances <- abundance(shape = "long", time = "date", clean = FALSE) %>% 
     inner_join(portal_data$species_table, by = "species")
 species_list <- unique(abundances$scientificname)
 species_list <- sort(species_list)
-min_period <- min(abundances$period)
-max_period <- max(abundances$period)
+min_date <- min(abundances$censusdate)
+max_date <- max(abundances$censusdate)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -36,11 +36,11 @@ ui <- fluidPage(
                         "Species",
                         species_list,
                         multiple = TRUE),
-            sliderInput("periods",
-                        "Periods",
-                        min = min_period,
-                        max = max_period,
-                        value = c(min_period, max_period)),
+            sliderInput("dates",
+                        "Date Range",
+                        min = min_date,
+                        max = max_date,
+                        value = c(min_date, max_date)),
             checkboxInput("smoother", 
                          "Smoother")
         ),
@@ -59,8 +59,8 @@ server <- function(input, output) {
     output$distPlot <- renderPlot({
         filtered_abundances <- abundances %>% 
             filter(scientificname %in% input$species) %>% 
-            filter(period >= input$periods[1], period <= input$periods[2])
-        p <- ggplot(filtered_abundances, aes(x = period, y = abundance, color = scientificname)) +
+            filter(censusdate >= input$dates[1], censusdate <= input$dates[2])
+        p <- ggplot(filtered_abundances, aes(x = censusdate, y = abundance, color = scientificname)) +
             geom_line()
         if (input$smoother){
             p <- p + geom_smooth()
