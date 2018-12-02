@@ -41,12 +41,8 @@ ui <- fluidPage(
                         min = min_period,
                         max = max_period,
                         value = c(min_period, max_period)),
-            checkboxGroupInput("display", 
-                               h3("Display"), 
-                               choices = list("Line" = 1, 
-                                              "Points" = 2, 
-                                              "Smoother" = 3),
-                               selected = 1)
+            checkboxInput("smoother", 
+                         "Smoother")
         ),
         
         # Show a plot of the generated distribution
@@ -64,14 +60,9 @@ server <- function(input, output) {
         filtered_abundances <- abundances %>% 
             filter(scientificname %in% input$species) %>% 
             filter(period >= input$periods[1], period <= input$periods[2])
-        p <- ggplot(filtered_abundances, aes(x = period, y = abundance, color = scientificname))
-        if (1 %in% input$display){
-            p <- p + geom_line()
-        }
-        if (2 %in% input$display){
-            p <- p + geom_point()
-        }
-        if (3 %in% input$display){
+        p <- ggplot(filtered_abundances, aes(x = period, y = abundance, color = scientificname)) +
+            geom_line()
+        if (input$smoother){
             p <- p + geom_smooth()
         }
         p
