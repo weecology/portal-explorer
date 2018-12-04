@@ -11,10 +11,8 @@ library(shiny)
 library(dplyr)
 library(ggplot2)
 library(portalr)
-library(plotly)
 
 # Data setup
-#download_observations()
 portal_data <- load_data()
 abundances <- abundance(shape = "long", time = "date", clean = FALSE) %>% 
     inner_join(portal_data$species_table, by = "species")
