@@ -18,7 +18,7 @@ output$pageStub <- renderUI(fluidPage(
                     "Smoother")
     ),
     
-    # Show a plot of the generated distributions
+    # Show output
     mainPanel(
       plotOutput(outputId = "distPlot", width = "100%"),
       plotOutput(outputId = "temp", width = "100%"),

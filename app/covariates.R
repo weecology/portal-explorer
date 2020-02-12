@@ -33,7 +33,7 @@
                       "Interaction"),
       width = 3),
       
-      # Show a plot of the generated distributions
+      # Show output
       mainPanel(
         plotOutput(outputId = "main_plot", height = 600),
         textOutput("glm", container = pre)

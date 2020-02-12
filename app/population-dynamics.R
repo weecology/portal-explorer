@@ -22,7 +22,7 @@ output$pageStub <- renderUI(fluidPage(
                   value = c(min_date, max_date)),
       width = 3),
     
-    # Show a plot of the generated distributions
+    # Show output
     mainPanel(
       plotOutput(outputId = "main_plot", height = 600),
       textOutput("model", container = pre)
@@ -35,37 +35,33 @@ output$main_plot <- renderPlot({
   
   filtered_data <- full_dat %>% 
     filter(scientificname %in% input$species) %>% 
-    filter(censusdate >= input$dates[1], censusdate <= input$dates[2]) %>%
-    group_by(month) %>% 
-    mutate_all(funs(ifelse(is.na(.), mean(., na.rm = TRUE), .))) %>%
-    ungroup()
+    filter(date >= input$dates[1], date <= input$dates[2])
   
   if(length(input$covariates)==0){
-    fit = tsglm(filtered_data$abundance, model = list(past_obs = 1, past_mean = 12), distr = "poisson",
-                link = "log")
+    
+    fit <- auto.arima(filtered_data$abundance)
+    
   } else {
-    cov_dat = filtered_data %>%
+    cov_dat <- filtered_data %>%
       select(input$covariates) %>%
       mutate_all(lag, as.integer(input$lag)) %>%
       as.matrix()
     
-    filtered_data <- filtered_data[complete.cases(cov_dat), ]
-    cov_dat <- cov_dat[complete.cases(cov_dat), ]
-    
-    fit = tsglm(filtered_data$abundance, model = list(past_obs = 1, past_mean = 12), 
-                distr = "poisson",
-                xreg = cov_dat, link = "log")
+    fit <- auto.arima(filtered_data$abundance, xreg = cov_dat)
   }
   
   model_data <- filtered_data %>%
-    mutate(fitted = fitted(fit))
+    mutate(fitted = fitted(fit),
+           lower = pmax(fitted(fit) - 1.96*sqrt(fit$sigma2),0),
+           upper = fitted(fit) + 1.96*sqrt(fit$sigma2))
+    
   
-  p <- ggplot(model_data, aes(x = censusdate, y = abundance)) +
+  p <- ggplot(model_data, aes(x = date, y = abundance)) +
       theme_set(theme_minimal()) +
       theme(axis.text=element_text(size=14), axis.title=element_text(size=18),
             legend.text=element_text(size=14), legend.title=element_text(size=14)) +
       geom_line() +
-#      geom_ribbon(aes(ymin = lower, ymax = upper), alpha = .15) +
+      geom_ribbon(aes(ymin = lower, ymax = upper), alpha = .15) +
       geom_line(aes(y = fitted), size = 1, linetype = 2, color = "blue") +
       labs(x = "date", y = "abundance")
     
@@ -75,26 +71,19 @@ output$main_plot <- renderPlot({
 output$model <- renderPrint({
   filtered_data <- full_dat %>% 
     filter(scientificname %in% input$species) %>% 
-    filter(censusdate >= input$dates[1], censusdate <= input$dates[2]) %>%
-    group_by(month) %>% 
-    mutate_all(funs(ifelse(is.na(.), mean(., na.rm = TRUE), .))) %>%
-    ungroup()
+    filter(date >= input$dates[1], date <= input$dates[2])
   
   if(length(input$covariates)==0){
-    fit = tsglm(filtered_data$abundance, model = list(past_obs = 1, past_mean = 12), distr = "poisson",
-                link = "log")
+    
+    fit <- auto.arima(filtered_data$abundance)
+    
   } else {
-    cov_dat = filtered_data %>%
+    cov_dat <- filtered_data %>%
       select(input$covariates) %>%
       mutate_all(lag, as.integer(input$lag)) %>%
       as.matrix()
     
-    filtered_data <- filtered_data[complete.cases(cov_dat), ]
-    cov_dat <- cov_dat[complete.cases(cov_dat), ]
-    
-    fit = tsglm(filtered_data$abundance, model = list(past_obs = 1, past_mean = 12), 
-                distr = "poisson",
-                xreg = cov_dat, link = "log")
+    fit <- auto.arima(filtered_data$abundance, xreg = cov_dat)
   }
   summary(fit)
 })
