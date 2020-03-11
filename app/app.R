@@ -14,6 +14,7 @@
 library(shiny)
 library(dplyr)
 library(ggplot2)
+remotes::install_github("weecology/portalr")
 library(portalr)
 library(stats)
 library(lubridate)

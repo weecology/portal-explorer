@@ -39,18 +39,9 @@ output$main_plot <- renderPlot({
   filtered_data <- full_dat %>% 
     filter(scientificname %in% input$species) %>% 
     filter(date >= input$dates[1], date <= input$dates[2]) %>%
-    add_seasons(season_level = input$seasons, summary_funs = "mean")
-  
-  if(input$seasons==2){
-    filtered_data <- filtered_data %>%
-      ungroup() %>%
-      arrange(year,desc(season))
-  } else {
-    filtered_data <- filtered_data %>%
-      ungroup() %>%
-      mutate(season = factor(season,c("winter", "spring", "summer", "fall"))) %>%
-      arrange(year,season)
-  }
+    add_seasons(season_level = input$seasons, summary_funs = "mean") %>%
+    arrange(year,season) %>%
+    ungroup()
   
   if(!isTruthy(input$seasonal)){
     
@@ -71,15 +62,15 @@ output$main_plot <- renderPlot({
            upper = fitted(fit) + 1.96*sqrt(fit$sigma2))
   
   
-  p <- ggplot(model_data, aes(x = year, y = abundance, color = season)) +
-    facet_grid(rows = vars(season)) +
+  p <- ggplot(model_data, aes(x = as.numeric(year), y = abundance, color = season)) +
     theme_set(theme_minimal()) +
     theme(axis.text=element_text(size=14), axis.title=element_text(size=18),
           legend.text=element_text(size=14), legend.title=element_text(size=14)) +
     geom_line() +
     geom_ribbon(aes(ymin = lower, ymax = upper), alpha = .15) +
     geom_line(aes(y = fitted), size = 1, linetype = 2) +
-    labs(x = "year", y = "abundance")
+    labs(x = "year", y = "abundance") +
+    facet_grid(rows = vars(season))
   
   p
 })
@@ -88,18 +79,9 @@ output$model <- renderPrint({
   filtered_data <- full_dat %>% 
     filter(scientificname %in% input$species) %>% 
     filter(date >= input$dates[1], date <= input$dates[2]) %>%
-    add_seasons(season_level = input$seasons, summary_funs = "mean")
-  
-  if(input$seasons==2){
-    filtered_data <- filtered_data %>%
-      ungroup() %>%
-      arrange(year,desc(season))
-  } else {
-    filtered_data <- filtered_data %>%
-      ungroup() %>%
-      mutate(season = factor(season,c("winter", "spring", "summer", "fall"))) %>%
-      arrange(year,season)
-  }
+    add_seasons(season_level = input$seasons, summary_funs = "mean") %>%
+    arrange(year,season) %>%
+    ungroup()
   
   if(!isTruthy(input$seasonal)){
     
