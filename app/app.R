@@ -36,7 +36,8 @@ ndvi_dat <- ndvi(level = "monthly", fill = FALSE) %>%
 
 weath_dat <- weather(level = "monthly", fill = FALSE) %>%
     full_join(ndvi_dat, by = c("year", "month")) %>%
-    select(year, month, mintemp, maxtemp, meantemp, precipitation, ndvi) %>%
+    select(year, month, mintemp, maxtemp, meantemp, precipitation, ndvi, 
+           warm_days, cool_precip, warm_precip) %>%
     mutate(date = ymd(paste(year,month,01)))
 
 full_dat <- abundances %>%
