@@ -11,6 +11,8 @@ library(portalr)
 library(stats)
 library(lubridate)
 library(forecast)
+remotes::install_github("weecology/portalcasting")
+library(portalcasting)
 
 #Load data
 all_data <- function(){
@@ -99,4 +101,15 @@ plot_seasonal <- function(data){
     geom_line(aes(y = fitted), size = 1, linetype = 2) +
     labs(x = "year", y = "abundance") +
     facet_grid(rows = vars(season))
+}
+
+plot_model <- function(model_fit){
+  ggplot(model_fit, aes(x = moon, y = abundance)) +
+    theme_set(theme_minimal()) +
+    theme(axis.text=element_text(size=14), axis.title=element_text(size=18),
+          legend.text=element_text(size=14), legend.title=element_text(size=14)) +
+    geom_line(col="blue") +
+    geom_ribbon(aes(ymin = lower, ymax = upper), alpha = .15) +
+    geom_line(aes(y = fitted), size = 1, linetype = 2) +
+    labs(x = "moon", y = "abundance")
 }

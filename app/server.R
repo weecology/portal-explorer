@@ -5,6 +5,7 @@
 library(shiny)
 library(shinyWidgets)
 library(htmltools)
+library(yaml)
 
 #Source page UIs
 source("landing_page.R")
@@ -216,4 +217,31 @@ shinyServer(function(input, output, session) {
     output$seasonal_model <- renderPrint({
       summary(seasonal_filter()$fit)
   })})
+
+  ###Model Explorer Page###
+  model_filter <- reactive({
+    model_det <- read_yaml("~/simple/data/metadata.yaml")
+    moons <- as.integer(model_det$start_moon:model_det$end_moon)
+    if(input$interp){dataset <- paste(input$dataset,"_interp", sep = "")} else {dataset <- input$dataset}
+    if(input$model == "pevGARCH") {
+    fit <- pevGARCH(main = "~/simple", 
+                    data_set = dataset, lag = as.integer(input$lag))$model_fits[[input$mod_species]] }
+    else{
+      f <- match.fun(input$model)
+      fit <- f(main = "~/simple", data_set = dataset)$model_fits[[input$mod_species]] }
+    
+    model_data <- bind_cols(abundance = as.vector(fit$x), fitted = as.vector(fitted(fit))) %>%
+             mutate(lower = pmax(fitted - 1.96*sqrt(as.numeric(fit$sigma2)),0),
+             upper = fitted + 1.96*sqrt(as.numeric(fit$sigma2)),
+             moon = model_det$start_moon + row_number() - 1)
+  return(list(model_data=model_data,fit=fit))
+  })
+  observe({
+    output$model_plot <- renderPlot({
+      plot_model(model_filter()$model_data)
+    })})
+  observe({
+    output$model_summary <- renderPrint({
+      summary(model_filter()$fit)
+    })})
 })
