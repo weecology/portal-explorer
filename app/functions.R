@@ -104,7 +104,7 @@ plot_seasonal <- function(data){
 }
 
 plot_model <- function(model_fit){
-  ggplot(model_fit, aes(x = moon, y = abund)) +
+  ggplot(model_fit, aes(x = moon, y = abundance)) +
     theme_set(theme_minimal()) +
     theme(axis.text=element_text(size=14), axis.title=element_text(size=18),
           legend.text=element_text(size=14), legend.title=element_text(size=14)) +

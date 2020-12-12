@@ -15,7 +15,7 @@ model_explorer_page <- function(data){
       titlePanel(h4("Design models using the portalcasting package")),
       sidebarLayout(
         sidebarPanel(
-          selectInput("species",
+          selectInput("mod_species",
                       "Species",
                       species_list, selected = "DM"),
           selectInput("model",
