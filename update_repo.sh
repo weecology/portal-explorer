@@ -3,6 +3,8 @@
 LOG_FILE="/pgsql/retrieverdash/portal_explorer_cron_setup_dir.log"
 cd /pgsql/retrieverdash/portal-explorer
 
+echo "$(date) - Portal explorer repo updating started" > "$LOG_FILE"
+
 changed=0
 git remote update && git status -uno | grep -q 'Your branch is behind' && changed=1
 if [ $changed = 1 ]; then
