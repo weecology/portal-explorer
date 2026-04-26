@@ -12,6 +12,7 @@ library(stats)
 library(lubridate)
 library(forecast)
 remotes::install_github("weecology/portalcasting")
+options(rgl.useNULL = TRUE)
 library(portalcasting)
 
 #Load data

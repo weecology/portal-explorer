@@ -219,22 +219,111 @@ shinyServer(function(input, output, session) {
   })})
 
   ###Model Explorer Page###
-  model_filter <- reactive({
-    model_det <- read_yaml("~/simple/data/metadata.yaml")
-    moons <- as.integer(model_det$start_moon:model_det$end_moon)
+  model_fit_cache <- reactiveVal(list())
+  model_fit_data <- reactive({
+    req(input$model, input$dataset, input$mod_species, input$lag)
+    req(!is.null(input$interp))
+
+    slow_models <- grep("^jags_", portalcasting::prefab_models(), value = TRUE)
+    validate(need(!(input$model %in% slow_models),
+                  "This model is expensive to refit in the app. Please choose a non-JAGS model."))
+
+    main_dir <- path.expand("~/simple")
+    metadata_path <- file.path(main_dir, "data", "metadata.yaml")
+    validate(need(file.exists(metadata_path), "Model metadata not found. Initialize ~/simple first."))
+
+    model_det <- read_yaml(metadata_path)
+    moon_start <- dplyr::coalesce(model_det$start_moon,
+                                  model_det$time$historic_start_newmoonnumber)
+    validate(need(!is.null(moon_start), "Model metadata is incomplete. Rebuild directory data."))
+    species_key <- if (identical(input$mod_species, "Total")) "total" else input$mod_species
+
     if(input$interp){dataset <- paste(input$dataset,"_interp", sep = "")} else {dataset <- input$dataset}
-    if(input$model == "pevGARCH") {
-    fit <- pevGARCH(main = "~/simple", 
-                    data_set = dataset, lag = as.integer(input$lag))$model_fits[[input$mod_species]] }
-    else{
-      f <- match.fun(input$model)
-      fit <- f(main = "~/simple", data_set = dataset)$model_fits[[input$mod_species]] }
+    cache_key <- paste(input$model, dataset, species_key, as.integer(input$lag), sep = "::")
+    cache <- model_fit_cache()
+    if (!is.null(cache[[cache_key]])) {
+      return(cache[[cache_key]])
+    }
+
+    model_controls <- portalcasting::models_controls(main = main_dir, models = input$model)[[input$model]]
+    validate(need(!is.null(model_controls), "Model controls not found for selected model."))
+
+    # Match portalcasting::cast evaluation context for model control expressions.
+    main <- main_dir
+    model <- input$model
+    species <- species_key
+    settings <- portalcasting::read_directory_settings(main = main_dir)
+    abundance <- portalcasting::prepare_abundance(main    = main_dir,
+                                                  dataset = dataset,
+                                                  species = species_key,
+                                                  model   = input$model)
+    metadata <- portalcasting::read_metadata(main = main_dir)
+    newmoons <- portalcasting::read_newmoons(main = main_dir)
+    covariates <- portalcasting::read_covariates(main = main_dir)
+
+    fit_args <- vector(mode = "list", length = length(model_controls$fit$args))
+    names(fit_args) <- names(model_controls$fit$args)
+    for (i in seq_along(fit_args)) {
+      fit_args[[i]] <- eval(parse(text = model_controls$fit$args[i]))
+    }
+    if ("lag" %in% names(fit_args)) {
+      fit_args[["lag"]] <- as.integer(input$lag)
+    }
+
+    fit <- do.call(what = model_controls$fit$fun, args = fit_args)
+
+    validate(need(!is.null(fit), "No fit found for this species/model/data combination."))
+    fitted_vals <- tryCatch(
+      as.vector(fitted(fit)),
+      error = function(e) {
+        if (!is.null(fit_args$response)) {
+          tryCatch(as.vector(fitted(fit, response = fit_args$response)),
+                   error = function(e2) numeric(0))
+        } else {
+          numeric(0)
+        }
+      }
+    )
+    validate(need(length(fitted_vals) > 0, "Model does not provide fitted values for this selection."))
+    observed_vals <- if (!is.null(fit_args$response)) as.vector(fit_args$response) else as.vector(abundance)
+    if (length(observed_vals) != length(fitted_vals)) {
+      observed_vals <- as.vector(abundance)
+    }
+    if (length(observed_vals) != length(fitted_vals) && !is.null(fit$x)) {
+      observed_vals <- as.vector(fit$x)
+    }
+    validate(need(length(observed_vals) == length(fitted_vals),
+                  "Selected model returned incompatible output lengths for plotting."))
+    sigma2_val <- suppressWarnings(as.numeric(fit$sigma2))
+    if (length(sigma2_val) == 0 || is.na(sigma2_val[1])) {
+      sigma2_val <- stats::var(observed_vals - fitted_vals, na.rm = TRUE)
+      if (is.na(sigma2_val) || !is.finite(sigma2_val)) {
+        sigma2_val <- 0
+      }
+    } else {
+      sigma2_val <- sigma2_val[1]
+    }
     
-    model_data <- bind_cols(abundance = as.vector(fit$x), fitted = as.vector(fitted(fit))) %>%
-             mutate(lower = pmax(fitted - 1.96*sqrt(as.numeric(fit$sigma2)),0),
-             upper = fitted + 1.96*sqrt(as.numeric(fit$sigma2)),
-             moon = model_det$start_moon + row_number() - 1)
-  return(list(model_data=model_data,fit=fit))
+    model_data <- bind_cols(abundance = observed_vals, fitted = fitted_vals) %>%
+             mutate(lower = pmax(fitted - 1.96*sqrt(sigma2_val),0),
+             upper = fitted + 1.96*sqrt(sigma2_val),
+             moon = as.integer(moon_start) + row_number() - 1) %>%
+             left_join(newmoons %>% select(newmoonnumber, censusdate),
+                       by = c("moon" = "newmoonnumber")) %>%
+             mutate(date = as.Date(censusdate))
+
+    out <- list(model_data=model_data,fit=fit)
+    cache[[cache_key]] <- out
+    model_fit_cache(cache)
+    return(out)
+  })
+  model_filter <- reactive({
+    req(input$mod_dates)
+    fit_data <- model_fit_data()
+    model_data <- fit_data$model_data %>%
+      filter(date >= input$mod_dates[1], date <= input$mod_dates[2])
+    validate(need(nrow(model_data) > 0, "No model data in selected date range."))
+    return(list(model_data=model_data, fit=fit_data$fit))
   })
   observe({
     output$model_plot <- renderPlot({
