@@ -331,6 +331,15 @@ shinyServer(function(input, output, session) {
     })})
   observe({
     output$model_summary <- renderPrint({
-      summary(model_filter()$fit)
+      fit <- model_filter()$fit
+      tryCatch(
+        summary(fit),
+        error = function(e) {
+          cat("Model summary is unavailable for this fit at moment.\n")
+          cat("Reason:", conditionMessage(e), "\n\n")
+          cat("Model class:\n")
+          print(class(fit))
+        }
+      )
     })})
 })

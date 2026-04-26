@@ -6,17 +6,26 @@ library(sf)
 library(gridExtra)
 library(stringr)
 library(htmltools)
-remotes::install_github("weecology/portalr")
+if (!requireNamespace("portalr", quietly = TRUE)) {
+  stop("Package 'portalr' is required. Run install_packages.R before starting the app.")
+}
 library(portalr)
 library(stats)
 library(lubridate)
 library(forecast)
-remotes::install_github("weecology/portalcasting")
+if (!requireNamespace("portalcasting", quietly = TRUE)) {
+  stop("Package 'portalcasting' is required. Run install_packages.R before starting the app.")
+}
 options(rgl.useNULL = TRUE)
 library(portalcasting)
 
 #Load data
 all_data <- function(){
+  cache <- getOption("portal_explorer.cached_data", NULL)
+  if (!is.null(cache)) {
+    return(cache)
+  }
+
   portal_data <- load_rodent_data()
   abundances <- abundance(shape = "long", time = "period", clean = FALSE) %>% 
     inner_join(portal_data$species_table, by = "species") %>%
@@ -39,7 +48,9 @@ all_data <- function(){
     select(-"date") %>%
     rename(date = censusdate)
   
-  return(list(abundances=abundances, weath_dat=weath_dat, full_dat=full_dat))
+  out <- list(abundances=abundances, weath_dat=weath_dat, full_dat=full_dat)
+  options(portal_explorer.cached_data = out)
+  return(out)
 }
 
 

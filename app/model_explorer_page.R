@@ -1,9 +1,4 @@
 model_explorer_page <- function(data){
-  main_dir <- path.expand("~/simple")
-  if (!file.exists(file.path(main_dir, "directory_configuration.yaml"))){
-  create_dir(main_dir)
-  fill_dir(main=main_dir) }
-  
   #Selector options
   species_list <- sort(c("Total", unique(data$species)))
   min_date <- min(data$date, na.rm = TRUE)
