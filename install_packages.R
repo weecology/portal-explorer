@@ -16,6 +16,7 @@ required_packages <- c(
   "stringr",
   "yaml",
   "remotes"
+)
 
 # Function to install missing packages
 install_if_missing <- function(package) {
