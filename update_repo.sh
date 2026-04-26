@@ -22,9 +22,8 @@ friday_end=52359
 Current_time=$(date +"%u%H%M")
 if [ $friday_start -le $Current_time ] && [ $friday_end -gt $Current_time ]
     then
-        R -e "library(portalcasting); fill_raw(main=\"~/simple\")" >> "$LOG_FILE"
-        R -e "library(portalcasting); fill_dir(main=\"~/simple\", downloads = zenodo_downloads(\"1215988\"))" >> "$LOG_FILE"
-        echo "Directory ~/simple is updated using fill_raw $(date)" >> "$LOG_FILE"
+        R -e "options(rgl.useNULL = TRUE); library(portalcasting); main <- path.expand(\"~/simple\"); portalcasting::create_dir(main = main); portalcasting::fill_dir(main = main)" >> "$LOG_FILE"
+        echo "Directory ~/simple is updated (create_dir + fill_dir) $(date)" >> "$LOG_FILE"
     fi
 
 echo "$(date) - Portal explorer repo update completed" >> "$LOG_FILE"

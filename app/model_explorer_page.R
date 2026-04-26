@@ -1,14 +1,14 @@
 model_explorer_page <- function(data){
-  if (!file.exists("~/simple")){
-  create_dir("~/simple")
-  fill_raw(main="~/simple")
-  fill_dir(main="~/simple", downloads = zenodo_downloads("1215988")) }
+  main_dir <- path.expand("~/simple")
+  if (!file.exists(file.path(main_dir, "directory_configuration.yaml"))){
+  create_dir(main_dir)
+  fill_dir(main=main_dir) }
   
   #Selector options
   species_list <- sort(c("Total", unique(data$species)))
-  min_date <- min(data$date)
-  max_date <- max(data$date)
-  models <- prefab_models()
+  min_date <- min(data$date, na.rm = TRUE)
+  max_date <- max(data$date, na.rm = TRUE)
+  models <- setdiff(prefab_models(), grep("^jags_", prefab_models(), value = TRUE))
   
   renderUI({
     fluidPage(
@@ -21,9 +21,10 @@ model_explorer_page <- function(data){
           selectInput("model",
                       "Model",
                       models),
+          helpText("Interactive explorer only shows non-JAGS models."),
           selectInput("dataset",
                       "Data Set",
-                      c("All", "Controls", "Exclosures")),
+                      c("All" = "all", "Controls" = "controls", "Exclosures" = "exclosures")),
           selectInput("covariates",
                       "Covariates",
                       c("precipitation","mintemp","maxtemp","meantemp","ndvi"), 
@@ -31,7 +32,7 @@ model_explorer_page <- function(data){
           selectInput("lag",
                       "Lag",
                       0:12),
-          sliderInput("dates",
+          sliderInput("mod_dates",
                       "Date Range",
                       min = min_date,
                       max = max_date,
